@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  address     String
+  parentPhone String
+  photoUrl    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  attendance  Attendance[]
+}
+
+model Attendance {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  date      String   // YYYY-MM-DD format
+  present   Boolean  @default(true)
+  studentId String   @db.ObjectId
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([date, studentId])
+}
