@@ -33,7 +33,7 @@ function StudentForm() {
                 parentPhone: res.data.parentPhone,
             });
             if (res.data.photoUrl) {
-                setPhotoPreview(`http://localhost:3001${res.data.photoUrl}`);
+                setPhotoPreview(`https://attendance-app-xr9r.onrender.com${res.data.photoUrl}`);
             }
         } catch (err) {
             setError('Failed to load student');
