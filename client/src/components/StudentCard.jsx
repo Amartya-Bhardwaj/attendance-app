@@ -4,7 +4,7 @@ function StudentCard({ student, attendance, onToggleAttendance, showActions = fa
     };
 
     const photoUrl = student.photoUrl
-        ? `https://attendance-app-xr9r.onrender.com${student.photoUrl}`
+        ? (student.photoUrl.startsWith('http') ? student.photoUrl : `http://localhost:3001${student.photoUrl}`)
         : null;
 
     return (

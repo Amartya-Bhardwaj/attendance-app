@@ -33,7 +33,10 @@ function StudentForm() {
                 parentPhone: res.data.parentPhone,
             });
             if (res.data.photoUrl) {
-                setPhotoPreview(`https://attendance-app-xr9r.onrender.com${res.data.photoUrl}`);
+                const url = res.data.photoUrl.startsWith('http')
+                    ? res.data.photoUrl
+                    : `http://localhost:3001${res.data.photoUrl}`;
+                setPhotoPreview(url);
             }
         } catch (err) {
             setError('Failed to load student');
@@ -172,7 +175,8 @@ function StudentForm() {
                             name="parentPhone"
                             value={formData.parentPhone}
                             onChange={handleChange}
-                            placeholder="+91 98765 43210"
+                            pattern="(\+91|0)?[6-9][0-9]{9}"
+                            placeholder="+919876543212"
                             required
                         />
                         <span className="text-muted text-sm" style={{ marginTop: '0.25rem', display: 'block' }}>

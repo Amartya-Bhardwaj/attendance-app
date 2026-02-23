@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.js';
+import { uploadPhoto, deletePhoto, isSupabaseConfigured } from '../services/storageService.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -12,22 +13,24 @@ const prisma = new PrismaClient();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists (fallback for local storage)
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for photo uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, 'student-' + uniqueSuffix + path.extname(file.originalname));
-    },
-});
+// Use memory storage when Supabase is configured, disk storage otherwise
+const storage = isSupabaseConfigured()
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+            cb(null, 'student-' + uniqueSuffix + path.extname(file.originalname));
+        },
+    });
 
 const upload = multer({
     storage,
@@ -42,6 +45,46 @@ const upload = multer({
         cb(new Error('Only image files are allowed'));
     },
 });
+
+/**
+ * Process uploaded file — upload to Supabase or save locally
+ */
+async function processUploadedFile(file) {
+    if (!file) return null;
+
+    if (isSupabaseConfigured()) {
+        // Upload to Supabase
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const fileName = 'student-' + uniqueSuffix + path.extname(file.originalname);
+        const { url, error } = await uploadPhoto(file.buffer, fileName, file.mimetype);
+
+        if (error) {
+            console.error('Failed to upload to Supabase:', error);
+            return null;
+        }
+        return url;
+    } else {
+        // Local storage fallback — file is already saved by multer disk storage
+        return `/uploads/${file.filename}`;
+    }
+}
+
+/**
+ * Delete a photo — from Supabase or local disk
+ */
+async function removePhoto(photoUrl) {
+    if (!photoUrl) return;
+
+    if (isSupabaseConfigured() && photoUrl.includes('supabase')) {
+        await deletePhoto(photoUrl);
+    } else if (photoUrl.startsWith('/uploads/')) {
+        // Local file
+        const photoPath = path.join(__dirname, '../..', photoUrl);
+        if (fs.existsSync(photoPath)) {
+            fs.unlinkSync(photoPath);
+        }
+    }
+}
 
 // Get all students
 router.get('/', authenticateToken, async (req, res) => {
@@ -83,7 +126,7 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
             return res.status(400).json({ error: 'Name, address, and parent phone are required' });
         }
 
-        const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+        const photoUrl = await processUploadedFile(req.file);
 
         const student = await prisma.student.create({
             data: {
@@ -120,13 +163,11 @@ router.put('/:id', authenticateToken, upload.single('photo'), async (req, res) =
         if (address) updateData.address = address;
         if (parentPhone) updateData.parentPhone = parentPhone;
         if (req.file) {
-            updateData.photoUrl = `/uploads/${req.file.filename}`;
-            // Delete old photo if exists
-            if (existingStudent.photoUrl) {
-                const oldPhotoPath = path.join(__dirname, '../..', existingStudent.photoUrl);
-                if (fs.existsSync(oldPhotoPath)) {
-                    fs.unlinkSync(oldPhotoPath);
-                }
+            const newPhotoUrl = await processUploadedFile(req.file);
+            if (newPhotoUrl) {
+                updateData.photoUrl = newPhotoUrl;
+                // Delete old photo
+                await removePhoto(existingStudent.photoUrl);
             }
         }
 
@@ -155,13 +196,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Student not found' });
         }
 
-        // Delete photo if exists
-        if (student.photoUrl) {
-            const photoPath = path.join(__dirname, '../..', student.photoUrl);
-            if (fs.existsSync(photoPath)) {
-                fs.unlinkSync(photoPath);
-            }
-        }
+        // Delete photo
+        await removePhoto(student.photoUrl);
 
         await prisma.student.delete({
             where: { id: studentId },
