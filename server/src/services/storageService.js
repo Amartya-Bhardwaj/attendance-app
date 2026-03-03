@@ -1,17 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const bucketName = process.env.SUPABASE_BUCKET || 'student-photos';
+const getSupabase = () => {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-let supabase = null;
+    if (supabaseUrl && supabaseKey && !supabaseUrl.includes('your-')) {
+        return createClient(supabaseUrl, supabaseKey);
+    }
+    return null;
+};
 
-if (supabaseUrl && supabaseKey && !supabaseUrl.includes('your-')) {
-    supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('📸 Supabase Storage initialized');
-} else {
-    console.log('📸 Supabase Storage not configured — photo uploads will use local storage');
-}
 
 /**
  * Upload a file to Supabase Storage
@@ -21,6 +19,8 @@ if (supabaseUrl && supabaseKey && !supabaseUrl.includes('your-')) {
  * @returns {Promise<{url: string|null, error: string|null}>}
  */
 export const uploadPhoto = async (fileBuffer, fileName, mimeType) => {
+    const supabase = getSupabase();
+    const bucketName = process.env.SUPABASE_BUCKET || 'student-photos';
     if (!supabase) {
         return { url: null, error: 'Supabase not configured' };
     }
@@ -59,6 +59,8 @@ export const uploadPhoto = async (fileBuffer, fileName, mimeType) => {
  * @returns {Promise<{success: boolean, error: string|null}>}
  */
 export const deletePhoto = async (photoUrl) => {
+    const supabase = getSupabase();
+    const bucketName = process.env.SUPABASE_BUCKET || 'student-photos';
     if (!supabase || !photoUrl) {
         return { success: false, error: 'Supabase not configured or no URL' };
     }
@@ -90,4 +92,4 @@ export const deletePhoto = async (photoUrl) => {
     }
 };
 
-export const isSupabaseConfigured = () => !!supabase;
+export const isSupabaseConfigured = () => !!getSupabase();

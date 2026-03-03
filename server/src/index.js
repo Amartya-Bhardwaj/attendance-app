@@ -1,14 +1,14 @@
+import './env.js';
+
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
 import studentRoutes from './routes/students.js';
 import attendanceRoutes from './routes/attendance.js';
-
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

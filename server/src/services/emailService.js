@@ -1,23 +1,26 @@
 import nodemailer from 'nodemailer';
 
-const emailUser = process.env.EMAIL_USER;
-const emailPass = process.env.EMAIL_APP_PASSWORD;
-const emailFromName = process.env.EMAIL_FROM_NAME || 'Attendance System';
+const getTransporter = () => {
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_APP_PASSWORD;
 
-let transporter = null;
-
-// Only initialize Nodemailer if credentials are configured
-if (emailUser && emailPass) {
-    transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: emailUser,
-            pass: emailPass,
-        },
-    });
-}
+    if (emailUser && emailPass) {
+        return nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: emailUser,
+                pass: emailPass,
+            },
+        });
+    }
+    return null;
+};
 
 export const sendAbsenceNotification = async (studentName, parentEmail) => {
+    const transporter = getTransporter();
+    const emailUser = process.env.EMAIL_USER;
+    const emailFromName = process.env.EMAIL_FROM_NAME || 'Attendance System';
+
     if (!transporter) {
         console.log('📧 Email (Mock): Would send absence notification for', studentName, 'to', parentEmail);
         return { success: true, mock: true };

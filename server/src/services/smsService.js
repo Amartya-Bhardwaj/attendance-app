@@ -1,17 +1,20 @@
 import twilio from 'twilio';
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+const getTwilioClient = () => {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-let client = null;
-
-// Only initialize Twilio if credentials are configured
-if (accountSid && authToken && !accountSid.includes('your-')) {
-    client = twilio(accountSid, authToken);
-}
+    // Only initialize Twilio if credentials are configured
+    if (accountSid && authToken && !accountSid.includes('your-')) {
+        return twilio(accountSid, authToken);
+    }
+    return null;
+};
 
 export const sendAbsenceNotification = async (studentName, parentPhone) => {
+    const client = getTwilioClient();
+    const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+
     if (!client) {
         console.log('📱 SMS (Mock): Would send absence notification for', studentName, 'to', parentPhone);
         return { success: true, mock: true };
