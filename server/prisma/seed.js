@@ -22,9 +22,9 @@ async function main() {
 
   // Create some sample students (check by name to avoid duplicates)
   const studentsData = [
-    { name: 'Rahul Sharma', address: '123 Main Street, Delhi', parentPhone: '+919876543210' },
-    { name: 'Priya Patel', address: '456 Park Avenue, Mumbai', parentPhone: '+919876543211' },
-    { name: 'Arjun Singh', address: '789 Garden Road, Bangalore', parentPhone: '+919876543212' },
+    { name: 'Rahul Sharma', address: '123 Main Street, Delhi', parentPhone: '+919876543210', parentEmail: 'temp@gmail.com' },
+    { name: 'Priya Patel', address: '456 Park Avenue, Mumbai', parentPhone: '+919876543211', parentEmail: 'temp@gmail.com' },
+    { name: 'Arjun Singh', address: '789 Garden Road, Bangalore', parentPhone: '+919876543212', parentEmail: 'temp@gmail.com' },
   ];
 
   for (const student of studentsData) {

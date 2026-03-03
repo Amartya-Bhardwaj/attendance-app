@@ -120,10 +120,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create student
 router.post('/', authenticateToken, upload.single('photo'), async (req, res) => {
     try {
-        const { name, address, parentPhone } = req.body;
+        const { name, address, parentPhone, parentEmail } = req.body;
 
-        if (!name || !address || !parentPhone) {
-            return res.status(400).json({ error: 'Name, address, and parent phone are required' });
+        if (!name || !address || !parentEmail) {
+            return res.status(400).json({ error: 'Name, address, and parent email are required' });
         }
 
         const photoUrl = await processUploadedFile(req.file);
@@ -132,7 +132,8 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
             data: {
                 name,
                 address,
-                parentPhone,
+                parentPhone: parentPhone || null,
+                parentEmail,
                 photoUrl,
             },
         });
@@ -147,7 +148,7 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
 // Update student
 router.put('/:id', authenticateToken, upload.single('photo'), async (req, res) => {
     try {
-        const { name, address, parentPhone } = req.body;
+        const { name, address, parentPhone, parentEmail } = req.body;
         const studentId = req.params.id;
 
         const existingStudent = await prisma.student.findUnique({
@@ -161,7 +162,8 @@ router.put('/:id', authenticateToken, upload.single('photo'), async (req, res) =
         const updateData = {};
         if (name) updateData.name = name;
         if (address) updateData.address = address;
-        if (parentPhone) updateData.parentPhone = parentPhone;
+        if (parentPhone !== undefined) updateData.parentPhone = parentPhone || null;
+        if (parentEmail) updateData.parentEmail = parentEmail;
         if (req.file) {
             const newPhotoUrl = await processUploadedFile(req.file);
             if (newPhotoUrl) {

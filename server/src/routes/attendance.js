@@ -1,7 +1,8 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.js';
-import { sendAbsenceNotification } from '../services/smsService.js';
+import { sendAbsenceNotification as sendAbsenceSMS } from '../services/smsService.js';
+import { sendAbsenceNotification as sendAbsenceEmail } from '../services/emailService.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -27,6 +28,7 @@ router.get('/date/:date', authenticateToken, async (req, res) => {
             name: student.name,
             address: student.address,
             parentPhone: student.parentPhone,
+            parentEmail: student.parentEmail,
             photoUrl: student.photoUrl,
             attendance: student.attendance[0] || null,
         }));
@@ -97,10 +99,16 @@ router.post('/mark', authenticateToken, async (req, res) => {
             },
         });
 
-        // Send SMS notification if student is marked absent
+        // Send notifications if student is marked absent
         if (!present) {
-            const smsResult = await sendAbsenceNotification(student.name, student.parentPhone);
-            return res.json({ attendance, smsNotification: smsResult });
+            const notifications = {};
+            if (student.parentPhone) {
+                notifications.smsNotification = await sendAbsenceSMS(student.name, student.parentPhone);
+            }
+            if (student.parentEmail) {
+                notifications.emailNotification = await sendAbsenceEmail(student.name, student.parentEmail);
+            }
+            return res.json({ attendance, ...notifications });
         }
 
         res.json({ attendance });
@@ -153,16 +161,24 @@ router.post('/bulk', authenticateToken, async (req, res) => {
             }
         }
 
-        // Send SMS notifications for absent students
+        // Send notifications for absent students
         const smsResults = [];
+        const emailResults = [];
         for (const student of absentStudents) {
-            const smsResult = await sendAbsenceNotification(student.name, student.parentPhone);
-            smsResults.push({ studentId: student.id, studentName: student.name, ...smsResult });
+            if (student.parentPhone) {
+                const smsResult = await sendAbsenceSMS(student.name, student.parentPhone);
+                smsResults.push({ studentId: student.id, studentName: student.name, ...smsResult });
+            }
+            if (student.parentEmail) {
+                const emailResult = await sendAbsenceEmail(student.name, student.parentEmail);
+                emailResults.push({ studentId: student.id, studentName: student.name, ...emailResult });
+            }
         }
 
         res.json({
             attendance: results,
             smsNotifications: smsResults,
+            emailNotifications: emailResults,
         });
     } catch (error) {
         console.error('Bulk mark attendance error:', error);

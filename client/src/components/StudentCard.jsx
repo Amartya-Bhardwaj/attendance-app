@@ -17,7 +17,8 @@ function StudentCard({ student, attendance, onToggleAttendance, showActions = fa
 
             <div className="student-info">
                 <div className="student-name">{student.name}</div>
-                <div className="student-details">📞 {student.parentPhone}</div>
+                <div className="student-details">📧 {student.parentEmail}</div>
+                {student.parentPhone && <div className="student-details">📞 {student.parentPhone}</div>}
             </div>
 
             {onToggleAttendance && (

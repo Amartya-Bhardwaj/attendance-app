@@ -11,6 +11,7 @@ function StudentForm() {
         name: '',
         address: '',
         parentPhone: '',
+        parentEmail: '',
     });
     const [photo, setPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
@@ -30,7 +31,8 @@ function StudentForm() {
             setFormData({
                 name: res.data.name,
                 address: res.data.address,
-                parentPhone: res.data.parentPhone,
+                parentPhone: res.data.parentPhone || '',
+                parentEmail: res.data.parentEmail || '',
             });
             if (res.data.photoUrl) {
                 const url = res.data.photoUrl.startsWith('http')
@@ -68,6 +70,7 @@ function StudentForm() {
             data.append('name', formData.name);
             data.append('address', formData.address);
             data.append('parentPhone', formData.parentPhone);
+            data.append('parentEmail', formData.parentEmail);
             if (photo) {
                 data.append('photo', photo);
             }
@@ -168,19 +171,33 @@ function StudentForm() {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="parentPhone">Parent's Phone Number *</label>
+                        <label htmlFor="parentEmail">Parent's Email Address *</label>
+                        <input
+                            type="email"
+                            id="parentEmail"
+                            name="parentEmail"
+                            value={formData.parentEmail}
+                            onChange={handleChange}
+                            placeholder="parent@example.com"
+                            required
+                        />
+                        <span className="text-muted text-sm" style={{ marginTop: '0.25rem', display: 'block' }}>
+                            Email notifications will be sent to this address for absences
+                        </span>
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="parentPhone">Parent's Phone Number</label>
                         <input
                             type="tel"
                             id="parentPhone"
                             name="parentPhone"
                             value={formData.parentPhone}
                             onChange={handleChange}
-                            pattern="(\+91|0)?[6-9][0-9]{9}"
                             placeholder="+919876543212"
-                            required
                         />
                         <span className="text-muted text-sm" style={{ marginTop: '0.25rem', display: 'block' }}>
-                            SMS notifications will be sent to this number for absences
+                            Optional — for contact reference only
                         </span>
                     </div>
 
