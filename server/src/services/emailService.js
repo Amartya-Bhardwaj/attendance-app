@@ -1,62 +1,25 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-let cachedTransporter = null;
-let lastUsedCreds = null;
-
-const getTransporter = () => {
-    const emailUser = process.env.EMAIL_USER;
-    const emailPass = process.env.EMAIL_APP_PASSWORD;
-
-    if (!emailUser || !emailPass) {
-        return null;
+const getResendClient = () => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey && apiKey !== 'your-resend-api-key') {
+        return new Resend(apiKey);
     }
-
-    const currentCreds = `${emailUser}:${emailPass}`;
-
-    // Reuse transporter if credentials haven't changed
-    if (cachedTransporter && lastUsedCreds === currentCreds) {
-        return cachedTransporter;
-    }
-
-    cachedTransporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // Use SSL/TLS for port 465
-        auth: {
-            user: emailUser,
-            pass: emailPass,
-        },
-        // Pooling can help with connection reuse in cloud environments
-        pool: true,
-        maxConnections: 3,
-        // Further increased timeouts for Render
-        connectionTimeout: 20000, // 20 seconds
-        greetingTimeout: 20000,
-        socketTimeout: 30000,
-        dnsTimeout: 10000,
-        debug: true,
-        logger: true,
-    });
-
-
-    lastUsedCreds = currentCreds;
-    return cachedTransporter;
+    return null;
 };
 
-
 export const sendAbsenceNotification = async (studentName, parentEmail) => {
-    const transporter = getTransporter();
-    const emailUser = process.env.EMAIL_USER;
+    const resend = getResendClient();
     const emailFromName = process.env.EMAIL_FROM_NAME || 'Attendance System';
 
-    if (!transporter) {
+    if (!resend) {
         console.log('📧 Email (Mock): Would send absence notification for', studentName, 'to', parentEmail);
         return { success: true, mock: true };
     }
 
     try {
-        const mailOptions = {
-            from: `"${emailFromName}" <${emailUser}>`,
+        const { data, error } = await resend.emails.send({
+            from: `${emailFromName} <onboarding@resend.dev>`,
             to: parentEmail,
             subject: `Absence Alert: ${studentName}`,
             html: `
@@ -84,13 +47,17 @@ export const sendAbsenceNotification = async (studentName, parentEmail) => {
                     </div>
                 </div>
             `,
-        };
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('📧 Email sent:', info.messageId);
-        return { success: true, messageId: info.messageId };
+        if (error) {
+            console.error('📧 Resend Error:', error.message);
+            return { success: false, error: error.message };
+        }
+
+        console.log('📧 Email sent via Resend:', data.id);
+        return { success: true, messageId: data.id };
     } catch (error) {
-        console.error('📧 Email Error:', error.message);
+        console.error('📧 Email Exception:', error.message);
         return { success: false, error: error.message };
     }
 };
