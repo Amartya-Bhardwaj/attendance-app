@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'https://attendance-app-xr9r.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_BASE,
