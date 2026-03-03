@@ -20,20 +20,24 @@ const getTransporter = () => {
 
     cachedTransporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
-        port: 587,
-        secure: false, // Use TLS (STARTTLS)
+        port: 465,
+        secure: true, // Use SSL/TLS for port 465
         auth: {
             user: emailUser,
             pass: emailPass,
         },
-        // Increase timeouts for cloud environments like Render
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-        dnsTimeout: 5000,
-        debug: true, // Enable debug logging for more info if it still fails
+        // Pooling can help with connection reuse in cloud environments
+        pool: true,
+        maxConnections: 3,
+        // Further increased timeouts for Render
+        connectionTimeout: 20000, // 20 seconds
+        greetingTimeout: 20000,
+        socketTimeout: 30000,
+        dnsTimeout: 10000,
+        debug: true,
         logger: true,
     });
+
 
     lastUsedCreds = currentCreds;
     return cachedTransporter;
