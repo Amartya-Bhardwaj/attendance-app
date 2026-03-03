@@ -102,9 +102,9 @@ router.post('/mark', authenticateToken, async (req, res) => {
         // Send notifications if student is marked absent
         if (!present) {
             const notifications = {};
-            if (student.parentPhone) {
-                notifications.smsNotification = await sendAbsenceSMS(student.name, student.parentPhone);
-            }
+            // if (student.parentPhone) {
+            //     notifications.smsNotification = await sendAbsenceSMS(student.name, student.parentPhone);
+            // }
             if (student.parentEmail) {
                 notifications.emailNotification = await sendAbsenceEmail(student.name, student.parentEmail);
             }

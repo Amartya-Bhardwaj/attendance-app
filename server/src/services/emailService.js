@@ -1,20 +1,44 @@
 import nodemailer from 'nodemailer';
 
+let cachedTransporter = null;
+let lastUsedCreds = null;
+
 const getTransporter = () => {
     const emailUser = process.env.EMAIL_USER;
     const emailPass = process.env.EMAIL_APP_PASSWORD;
 
-    if (emailUser && emailPass) {
-        return nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: emailUser,
-                pass: emailPass,
-            },
-        });
+    if (!emailUser || !emailPass) {
+        return null;
     }
-    return null;
+
+    const currentCreds = `${emailUser}:${emailPass}`;
+
+    // Reuse transporter if credentials haven't changed
+    if (cachedTransporter && lastUsedCreds === currentCreds) {
+        return cachedTransporter;
+    }
+
+    cachedTransporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // Use TLS (STARTTLS)
+        auth: {
+            user: emailUser,
+            pass: emailPass,
+        },
+        // Increase timeouts for cloud environments like Render
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        dnsTimeout: 5000,
+        debug: true, // Enable debug logging for more info if it still fails
+        logger: true,
+    });
+
+    lastUsedCreds = currentCreds;
+    return cachedTransporter;
 };
+
 
 export const sendAbsenceNotification = async (studentName, parentEmail) => {
     const transporter = getTransporter();
