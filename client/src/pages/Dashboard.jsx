@@ -10,6 +10,7 @@ function Dashboard() {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [toast, setToast] = useState(null);
 
     useEffect(() => {
@@ -45,19 +46,32 @@ function Dashboard() {
                     : s
             ));
 
-            if (!present && res.data.smsNotification) {
-                if (res.data.smsNotification.mock) {
-                    showToast('Student marked absent (SMS mock mode)', 'success');
-                } else {
-                    showToast('Student marked absent - SMS sent to parent', 'success');
-                }
-            } else {
-                showToast(present ? 'Marked present' : 'Marked absent', 'success');
-            }
+            showToast(present ? 'Marked present' : 'Marked absent', 'success');
         } catch (err) {
             showToast('Failed to update attendance', 'error');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleExportAbsent = async () => {
+        setExporting(true);
+        try {
+            const res = await attendanceAPI.exportAbsent(date);
+            const blob = new Blob([res.data], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `absent_students_${date}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            showToast('CSV downloaded successfully', 'success');
+        } catch (err) {
+            showToast('Failed to export absent students', 'error');
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -82,15 +96,27 @@ function Dashboard() {
                     <p className="text-secondary">Mark attendance for your class</p>
                 </div>
 
-                <div className="date-picker">
-                    <button className="btn-icon" onClick={() => changeDate(-1)}>←</button>
-                    <input
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        className="date-input"
-                    />
-                    <button className="btn-icon" onClick={() => changeDate(1)}>→</button>
+                <div className="dashboard-header-actions">
+                    <button
+                        className="btn btn-export"
+                        onClick={handleExportAbsent}
+                        disabled={stats.absent === 0 || exporting}
+                        title={stats.absent === 0 ? 'No absent students to export' : `Export ${stats.absent} absent student(s)`}
+                    >
+                        <span className="btn-export-icon">⬇</span>
+                        {exporting ? 'Exporting…' : 'Export Absent'}
+                    </button>
+
+                    <div className="date-picker">
+                        <button className="btn-icon" onClick={() => changeDate(-1)}>←</button>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="date-input"
+                        />
+                        <button className="btn-icon" onClick={() => changeDate(1)}>→</button>
+                    </div>
                 </div>
             </div>
 

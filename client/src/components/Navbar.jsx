@@ -29,6 +29,12 @@ function Navbar() {
                         Students
                     </Link>
                     <Link
+                        to="/fees"
+                        className={`navbar-link ${isActive('/fees') ? 'active' : ''}`}
+                    >
+                        Fees
+                    </Link>
+                    <Link
                         to="/history"
                         className={`navbar-link ${isActive('/history') ? 'active' : ''}`}
                     >

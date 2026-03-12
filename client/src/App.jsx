@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
 import StudentForm from './pages/StudentForm';
 import AttendanceHistory from './pages/AttendanceHistory';
+import Fees from './pages/Fees';
 import Navbar from './components/Navbar';
 
 // Auth Context
@@ -103,6 +104,11 @@ function App() {
           <Route path="/history" element={
             <ProtectedRoute>
               <AppLayout><AttendanceHistory /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/fees" element={
+            <ProtectedRoute>
+              <AppLayout><Fees /></AppLayout>
             </ProtectedRoute>
           } />
           <Route path="*" element={<Navigate to="/" />} />

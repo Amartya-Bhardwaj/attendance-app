@@ -1,8 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.js';
-import { sendAbsenceNotification as sendAbsenceSMS } from '../services/smsService.js';
-import { sendAbsenceNotification as sendAbsenceEmail } from '../services/emailService.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -99,18 +97,6 @@ router.post('/mark', authenticateToken, async (req, res) => {
             },
         });
 
-        // Send notifications if student is marked absent
-        if (!present) {
-            const notifications = {};
-            // if (student.parentPhone) {
-            //     notifications.smsNotification = await sendAbsenceSMS(student.name, student.parentPhone);
-            // }
-            if (student.parentEmail) {
-                notifications.emailNotification = await sendAbsenceEmail(student.name, student.parentEmail);
-            }
-            return res.json({ attendance, ...notifications });
-        }
-
         res.json({ attendance });
     } catch (error) {
         console.error('Mark attendance error:', error);
@@ -128,7 +114,6 @@ router.post('/bulk', authenticateToken, async (req, res) => {
         }
 
         const results = [];
-        const absentStudents = [];
 
         for (const record of records) {
             const { studentId, present } = record;
@@ -149,37 +134,9 @@ router.post('/bulk', authenticateToken, async (req, res) => {
             });
 
             results.push(attendance);
-
-            // Collect absent students for notifications
-            if (!present) {
-                const student = await prisma.student.findUnique({
-                    where: { id: studentId },
-                });
-                if (student) {
-                    absentStudents.push(student);
-                }
-            }
         }
 
-        // Send notifications for absent students
-        const smsResults = [];
-        const emailResults = [];
-        for (const student of absentStudents) {
-            if (student.parentPhone) {
-                const smsResult = await sendAbsenceSMS(student.name, student.parentPhone);
-                smsResults.push({ studentId: student.id, studentName: student.name, ...smsResult });
-            }
-            if (student.parentEmail) {
-                const emailResult = await sendAbsenceEmail(student.name, student.parentEmail);
-                emailResults.push({ studentId: student.id, studentName: student.name, ...emailResult });
-            }
-        }
-
-        res.json({
-            attendance: results,
-            smsNotifications: smsResults,
-            emailNotifications: emailResults,
-        });
+        res.json({ attendance: results });
     } catch (error) {
         console.error('Bulk mark attendance error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -211,6 +168,56 @@ router.get('/summary', authenticateToken, async (req, res) => {
         res.json(attendance);
     } catch (error) {
         console.error('Get attendance summary error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Export absent students as CSV for a given date
+router.get('/export/absent/:date', authenticateToken, async (req, res) => {
+    try {
+        const { date } = req.params;
+
+        const absentRecords = await prisma.attendance.findMany({
+            where: {
+                date,
+                present: false,
+            },
+            include: {
+                student: true,
+            },
+            orderBy: {
+                student: { name: 'asc' },
+            },
+        });
+
+        // Build CSV
+        const csvHeader = 'S.No,Student Name,Parent Email,Parent Phone,Address';
+        const csvRows = absentRecords.map((record, index) => {
+            const s = record.student;
+            const escapeCsv = (val) => {
+                if (!val) return '';
+                // Wrap in quotes if it contains comma, quote, or newline
+                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                    return `"${val.replace(/"/g, '""')}"`;
+                }
+                return val;
+            };
+            return [
+                index + 1,
+                escapeCsv(s.name),
+                escapeCsv(s.parentEmail || ''),
+                escapeCsv(s.parentPhone || ''),
+                escapeCsv(s.address || ''),
+            ].join(',');
+        });
+
+        const csv = [csvHeader, ...csvRows].join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=absent_students_${date}.csv`);
+        res.send(csv);
+    } catch (error) {
+        console.error('Export absent students error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

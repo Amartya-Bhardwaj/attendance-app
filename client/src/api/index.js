@@ -52,6 +52,14 @@ export const attendanceAPI = {
     getByStudent: (id) => api.get(`/attendance/student/${id}`),
     mark: (studentId, date, present) => api.post('/attendance/mark', { studentId, date, present }),
     markBulk: (date, records) => api.post('/attendance/bulk', { date, records }),
+    exportAbsent: (date) => api.get(`/attendance/export/absent/${date}`, { responseType: 'blob' }),
+};
+
+// Fees API
+export const feesAPI = {
+    getByMonth: (month) => api.get(`/fees/${month}`),
+    mark: (studentId, month, amount, paid) => api.post('/fees/mark', { studentId, month, amount, paid }),
+    markBulk: (month, records) => api.post('/fees/bulk', { month, records }),
 };
 
 export default api;
